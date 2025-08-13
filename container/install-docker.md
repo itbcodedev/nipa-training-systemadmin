@@ -66,6 +66,15 @@ newgrp docker
 ```
 
 ## Workshop
+
+```
+$ ps aux | grep -E 'docker|containerd'
+root       32831  0.0  0.6 1876400 48312 ?       Ssl  Aug13   0:05 /usr/bin/containerd
+root       32969  0.4  1.1 2325944 84280 ?       Ssl  Aug13   0:38 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+root       33688  0.0  0.0   6096  2560 pts/0    S    Aug13   0:00 newgrp docker
+nc-user    37263  0.0  0.0   6628  2176 pts/0    S+   00:09   0:00 grep --color=auto -E docker|containerd
+```
+
 [https://hub.docker.com/_/ubuntu](https://hub.docker.com/_/ubuntu)
 
 ![](./images/repo-ubuntu-official.png)

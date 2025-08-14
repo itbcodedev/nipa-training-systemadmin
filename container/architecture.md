@@ -76,3 +76,14 @@ Seccomp filters system calls that a container can make, reducing the attack surf
 
 ### AppArmor/SELinux:
 These are Linux security modules that provide mandatory access control (MAC) policies, further restricting what processes within a container can do.
+
+Note: mandatory access control (MAC) policies,
+
+Mandatory Access Control (MAC) systems, like AppArmor and SELinux, allow sysadmins to grant or deny access to resources and control systems built into the Linux kernel. While both perform the same tasks, these systems work differently and offer various features.
+
+![](./images/apparmor-work-flow.webp)
+
+```
+sudo apparmor_status
+```
+![](./images/appArmor.png)

@@ -176,7 +176,7 @@ Final Vagrantfile:
 Vagrant.configure("2") do |config|
   config.vm.box = "cloud-image/ubuntu-24.04"
   config.vm.network "private_network", ip: "192.168.100.10"
-
+  config.vm.network "forwarded_port", guest: 80, host: 8080
   config.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__exclude: ".git/"
 
   config.vm.provider "libvirt" do |libvirt|
@@ -208,3 +208,85 @@ apache2 -v
 ```
 
 ![](./images/vagrant-check-apache2.png)
+
+
+# Name VM as you want like "webserver"
+```ruby
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.define "webserver" do |default|
+    default.vm.box = "cloud-image/ubuntu-24.04"
+    default.vm.network "private_network", ip: "192.168.100.10"
+    default.vm.network "forwarded_port", guest: 80, host: 8080
+    default.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__exclude: ".git/"
+
+    default.vm.provider "libvirt" do |libvirt|
+      libvirt.memory = "2048"
+      libvirt.cpus = 2
+      libvirt.driver = "kvm"
+      libvirt.uri = "qemu:///system"
+    end
+
+    default.vm.provision "shell", inline: <<-SHELL
+      apt-get update
+      apt-get install -y apache2
+    SHELL
+  end
+end
+```
+
+## Check vagrant status
+```
+$ vagrant status
+[fog][WARNING] Unrecognized arguments: libvirt_ip_command
+Current machine states:
+
+webserver                 running (libvirt)
+
+The Libvirt domain is running. To stop this machine, you can run
+`vagrant halt`. To destroy the machine, you can run `vagrant destroy`.
+```
+- webserver is name of server 
+
+```
+vagrant ssh
+```
+
+```
+sudo systemctl start apache2
+ss -tulpn
+
+Netid  State    Recv-Q   Send-Q            Local Address:Port     Peer Address:Port  Process
+udp    UNCONN   0        0                    127.0.0.54:53            0.0.0.0:*
+udp    UNCONN   0        0                 127.0.0.53%lo:53            0.0.0.0:*
+udp    UNCONN   0        0          192.168.121.121%ens5:68            0.0.0.0:*
+tcp    LISTEN   0        4096              127.0.0.53%lo:53            0.0.0.0:*
+tcp    LISTEN   0        4096                    0.0.0.0:22            0.0.0.0:*
+tcp    LISTEN   0        4096                 127.0.0.54:53            0.0.0.0:*
+tcp    LISTEN   0        4096                       [::]:22               [::]:*
+tcp    LISTEN   0        511                           *:80                  *:*
+```
+
+
+![](./images/vagrant-start-apache2.png)
+
+
+## Test Webpage
+```
+curl http://localhost
+```
+
+![](./images/curl-localhost.png)
+
+- Exit from vm and test from host shell on port 8080 , Because we forward from VM:80 to Host:8080
+
+```
+nc-user@sawangpong-linux:~/ubuntu_vm$ curl http://localhost:8080
+```
+
+![](./images/curl-host.png)
+
+## Test from External Access
+![](./images/external-8080.png)

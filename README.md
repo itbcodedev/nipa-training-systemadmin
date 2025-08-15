@@ -1,8 +1,8 @@
 
-## Nipa Training Systemadmin
+## Nipa Training SysAdmin Day2
 
 Compare VM and Container
-![](./container/images/vm-docker.png)
+![](./container/images/vm-container.jpg)
 
 The Container as a Complete Runtime Package
 Containers bundle applications with all their dependencies - including language runtimes like Node.js, Go, or .NET Core - into self-contained, portable units. This represents a fundamental shift from traditional deployment models.

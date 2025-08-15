@@ -2,9 +2,27 @@
 [https://opensource.com/article/21/8/container-linux-technology](https://opensource.com/article/21/8/container-linux-technology)
 
 Docker containers achieve process isolation primarily through the use of Linux kernel features, specifically namespaces and cgroups (control groups).
+
+![](./images/Linux%20kernel.png)
+
 ### Namespaces:
 Namespaces provide isolated views of system resources for each container. Docker leverages several types of namespaces to achieve this:
 - `PID Namespace:` Isolates process IDs, so processes inside a container only see other processes within that same container and have their own independent PID 1.
+
+```
+## Create IP namespace
+sudo ip netns add my_namespace
+
+## Verify IP namespace
+ip netns
+
+## Execute a command within namespace
+sudo ip netns exec my_namespace ip link show
+
+## Delete a network delete my_namespace
+sudo ip netns delete my_namespace
+```
+
 - `User Namespace:` Maps user IDs and group IDs, allowing a user in a container to be treated as root within the container while being mapped to a non-privileged user on the host.
 - `Mount Namespace:` Creates an isolated filesystem view, preventing containers from seeing or modifying the host's filesystem or other containers' filesystems unless explicitly shared.
 - `Network Namespace:` Provides each container with its own network stack, including network interfaces, IP addresses, routing tables, and firewall rules, independent of the host and other containers.
@@ -87,3 +105,99 @@ Mandatory Access Control (MAC) systems, like AppArmor and SELinux, allow sysadmi
 sudo apparmor_status
 ```
 ![](./images/appArmor.png)
+
+## Workshop ip namespace
+[https://www.redhat.com/en/blog/net-namespaces](https://www.redhat.com/en/blog/net-namespaces)
+![](./images/ipnamespace.png)
+
+- 1 Create environment variable
+
+```
+$ cat << EOF >> vars
+namespace1=client
+namespace2=server
+command='python3 -m http.server'
+ip_address1="10.10.10.10/24"
+ip_address2='10.10.10.20/24'
+interface1=veth-client
+interface2=veth-server
+EOF
+$ . vars
+```
+
+- 2 Create namespace, First create use `ip netns add ` command
+```
+sudo ip netns add $namespace1
+sudo ip netns add $namespace2
+```  
+
+- 3 Verify that namespace 
+```
+$ ip netns list
+```
+
+- 4 Namespace status  
+  If you run a command in one of the new namespaces, you see that there is only the loopback address, and it is marked as DOWN:
+```
+$ sudo ip netns exec $namespace2 ip a
+```
+- 5 next step is to create the virtual "Ethernet cable" by creating a link between the two namespaces, like this:
+  
+```
+sudo ip link add \
+       ptp-$interface1 \
+       type veth \
+       peer name ptp-$interface2
+```
+- 6 Run `ip link command on host` you'll see two additional links created by this command:
+```
+$ ip link
+```
+it created a link with the following convention:` <link name>@<peer link name>`
+
+- 7 At this point, you have created the links but have not assigned them anywhere. Go ahead and assign the interfaces to their respective namespaces:
+
+```
+sudo ip link set ptp-$interface1 netns $namespace1
+sudo ip link set ptp-$interface2 netns $namespace2
+```
+
+- 8 After running this command, the host no longer has access to these links because they are assigned to a different net namespace. If you rerun the ip netns exec command, you can see that your new namespaces have devices, but they are still marked as DOWN and do not have IP addresses to communicate with:
+```
+$ sudo ip netns exec $namespace2 ip ad
+```
+- 9 Next, assign the IPs and bring the interfaces up:
+
+```
+sudo ip netns exec $namespace1 ip addr \
+     add $ip_address1 dev ptp-$interface1
+sudo ip netns exec $namespace2 ip addr \
+     add $ip_address2 dev ptp-$interface2
+sudo ip netns exec $namespace1 ip link set \
+     dev ptp-$interface1 up
+sudo ip netns exec $namespace2 ip link set \
+     dev ptp-$interface2 up
+```
+
+- 10 Finally, start the Python 3 web server in $namespace2 and test it:
+```
+sudo ip netns exec $namespace2 $command &
+```
+- Because you have the subnet CIDR in the $ip_addres2, you have options. You can do some Bash trickery to remove it:
+
+```
+sudo ip netns exec $namespace1 curl `echo $ip_address2 |awk -F '/' '{print $1}'`:8000
+```
+
+- Or you can simply type the IP address into the command:
+```
+sudo ip netns exec $namespace1 curl 10.10.10.20:8000
+```
+
+- You receive a directory listing for whichever directory was active during the instantiation of the Python web server. Because the original host does not have an Ethernet device on the 10.x.x.x network, it cannot reach the new namespaces:
+```
+$ curl --connect-timeout 3 10.10.10.20:8000
+```
+
+curl: (28) Connection timed out after 3001 milliseconds
+Even if it did have a properly configured interface for that subnet, because you used a point-to-point "cable," only the namespaces connected to that interface peering can communicate with each other.

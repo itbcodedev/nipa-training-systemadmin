@@ -1,0 +1,24 @@
+site_name: Nipa System Admin 
+site_url: https://sitename.example
+theme:
+  logo: assets/logo.png
+  name: material
+  font:
+    text: IBM Plex Sans Thai Looped
+  features:
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
+
+copyright: Copyright &copy; 2025 Sawangpong muadphet <sawangpongm@gmail.com>
